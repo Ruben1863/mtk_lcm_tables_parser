@@ -7,7 +7,7 @@ public class Parser {
     static boolean extraDebug = false;
 
     // Files
-    static File lk;
+    static File binaryFile;
     static File hexFile;
     static File out;
 
@@ -38,18 +38,19 @@ public class Parser {
         public String format_params() {
             StringBuilder out = new StringBuilder();
             for (int i = 0; i < params_list.length; i++) {
-                if(i == params_list.length-1) {
-                    out.append("0x").append(params_list[i]);
-                } else {
-                    out.append("0x").append(params_list[i]).append(", ");
-                }
+                if(!params_list[i].equals(""))
+                    if(i == params_list.length-1) {
+                        out.append("0x").append(params_list[i]);
+                    } else {
+                        out.append("0x").append(params_list[i]).append(", ");
+                    }
             }
             return out.toString();
         }
 
         @Override
         public String toString() {
-            if(cmd.equals("REGFLAG_END_OF_TABLE")) {
+            if(cmd.equals("REGFLAG_END_OF_TABLE") || cmd.equals("REGFLAG_DELAY")) {
                 return "{" + cmd + ", " + Integer.parseInt(count,16) + ", {" + format_params() + "}}";
             } else {
                 return "{0x" + cmd + ", " + Integer.parseInt(count,16) + ", {" + format_params() + "}}";
@@ -58,7 +59,7 @@ public class Parser {
     }
 
     public static void argParser(String[] args) {
-        System.out.println("[INFO] LCM TABLES Parser tool (v0.1) by Ruben1863");
+        System.out.println("[INFO] LCM TABLES Parser tool (v0.2) by Ruben1863");
         if(args == null || args.length == 0) {
             System.out.println("[ERROR] No arguments provided!\n" + "Exiting");
             System.exit(1);
@@ -141,13 +142,13 @@ public class Parser {
 
     public static void convertFileToHex() {
         try {
-            lk = new File("input/" + filename);
-            debug("[INFO] Binary size is " + lk.length() + " bytes");
+            binaryFile = new File("input/" + filename);
+            debug("[INFO] Binary size is " + binaryFile.length() + " bytes");
         } catch (NullPointerException e) {
-            System.out.println("[ERROR] toHexFile: There was an error opening " + lk.getName() + "!\n" + "Exiting");
+            System.out.println("[ERROR] toHexFile: There was an error opening " + binaryFile.getName() + "!\n" + "Exiting");
             System.exit(1);
         }
-        debug("[INFO] Converting " + lk.getName() + " to hex, wait some seconds");
+        debug("[INFO] Converting " + binaryFile.getName() + " to hex, wait some seconds");
         try {
             File outDirectory = new File("output");
             if (!outDirectory.exists()) {
@@ -165,16 +166,16 @@ public class Parser {
                     }
                 }
             }
-            hexFile = new File("output/hex.txt");
+            hexFile = new File("output/hex");
             if (!hexFile.createNewFile()) {
-                debug("[INFO] toHexFile: hex.txt already exists, deleting it before starting!");
+                debug("[INFO] toHexFile: 'hex' file already exists, deleting it before starting!");
                 boolean b = hexFile.delete();
                 boolean b2 = hexFile.createNewFile();
                 debug("[DEBUG] toHexFile: delete " + b);
                 debug("[DEBUG] toHexFile: create new file " + b2);
             }
         } catch (NullPointerException | IOException e) {
-            System.out.println("[ERROR] toHexFile: There was an error creating hex.txt!\n" + "Exiting");
+            System.out.println("[ERROR] toHexFile: There was an error creating 'hex' file!\n" + "Exiting");
             System.exit(1);
         }
 
@@ -184,7 +185,7 @@ public class Parser {
         // Convert file to hex and write to hex file
         int value;
         try {
-            FileInputStream fis = new FileInputStream(lk);
+            FileInputStream fis = new FileInputStream(binaryFile);
             BufferedInputStream bis = new BufferedInputStream(fis);
             while ((value = bis.read()) != -1) {
                 hex = Integer.toHexString(value);
@@ -202,7 +203,7 @@ public class Parser {
             bufferedWriter.close();
             fileWriter.close();
         } catch (IOException e) {
-            System.out.println("[ERROR] toHexFile: There was an error converting " + lk.getName() + " to hex!\n" + "Exiting");
+            System.out.println("[ERROR] toHexFile: There was an error converting " + binaryFile.getName() + " to hex!\n" + "Exiting");
             System.exit(1);
         }
     }
@@ -240,6 +241,7 @@ public class Parser {
                 // Because there are fake header indexes, we need all bytes and then check them for finding "end of table"
                 // Then Split the string into array of 2 chars
                 String[] arr = result.substring(headerIndexesMatches.get(k)).split("(?<=\\G.{" + 2 + "})");
+                String endOfTableCmd = "";
                 boolean isEndOfTable = false;
                 for(int i = 0; i < arr.length; i++) {
                     String cmd = arr[i], count = arr[i+(offset/2)+1];
@@ -250,13 +252,14 @@ public class Parser {
                         }
                         table.add(new LCM_setting_table(cmd, count, params));
                         table.add(new LCM_setting_table("REGFLAG_END_OF_TABLE", "00", new String[]{}));
+                        endOfTableCmd = arr[i+72]; // Jump 72 bytes
                         break;
                     } else {
                         if (count.equals("00")) {
                             if (cmd.equals("29")) {
                                 isEndOfTable = true;
                             }
-                            table.add(new LCM_setting_table(cmd, count, new String[]{"00"}));
+                            table.add(new LCM_setting_table(cmd, count, new String[]{""}));
                             i += 71; // Jump 71 bytes
                         } else if (cmd.equals("29") && count.equals("01") && arr[i + (offset / 2) + 2].equals("00")) {
                             isEndOfTable = true;
@@ -273,7 +276,25 @@ public class Parser {
                     }
                 }
 
+                // check for DELAYS? May be buggy
+                LCM_setting_table lastDataBeforeEnd = table.get(table.size()-2);
+                String delay = "";
+                if(!lastDataBeforeEnd.cmd.equals("0x29")) {
+                    delay = lastDataBeforeEnd.cmd;
+                }
+
+                for(int j = 0; j < table.size(); j++) {
+                    if(table.get(j).cmd.equals(delay)) {
+                        LCM_setting_table newLine = table.get(j);
+                        newLine.cmd = "REGFLAG_DELAY";
+                        newLine.params_list = new String[]{""};
+                        table.set(j, newLine);
+                    }
+                }
+
                 // Write table to output files
+                tableOut.println("//REGFLAG_DELAY = 0x" + delay);
+                tableOut.println("//REGFLAG_END_OF_TABLE = 0x" + endOfTableCmd + "\n");
                 tableOut.print(arrayToString(table));
             } catch (NullPointerException | IOException e) {
                 System.out.println("[ERROR] parse: Error while creating "  + out.getName() + " file!\n" + "Exiting");

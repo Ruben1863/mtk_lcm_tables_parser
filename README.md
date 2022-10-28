@@ -19,7 +19,6 @@ The output will be like:
 
 ## Notes: 
 - This utility it is still in alpha version, so it is very possible that you will find errors or certain tables that it cannot process.
-- You will need to handwrite `REGFLAG_DELAY` values, as the tool currently doesn't detect them.
 - For now is just able to extract `lcm_init` tables. 
 - V3 init tables aren't supported.
 - In case something is broken or you have any doubt, feel free to open an [ISSUE](https://github.com/Ruben1863/mtk_lcm_tables_parser/issues "Issues").
