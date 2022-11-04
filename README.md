@@ -1,7 +1,7 @@
 # MTK LCM TABLES Parser by ruben1863
 
 ## What is this?
-This is a decoding/reversing utility that is able to extract MTK lcm drivers init table from a binary file (kernel or lk.bin) providing its start header.
+This is a decoding/reversing utility that is able to extract MTK lcm drivers init table from a binary file (kernel without compression or lk.bin) providing its start header.
 The binary file should be placed at `input` folder, and possible lcm tables will be placed at `output` folder.
 The output tables will be formatted using `struct LCM_setting_table` syntax.
 
@@ -21,15 +21,17 @@ The output will be like:
 - This utility it is still in alpha version, so it is very possible that you will find errors or certain tables that it cannot process.
 - For now is just able to extract `lcm_init` tables. 
 - V3 init tables aren't supported.
+- Init tables with delays like: `0xFFFE`, aren't supported.
 - In case something is broken or you have any doubt, feel free to open an [ISSUE](https://github.com/Ruben1863/mtk_lcm_tables_parser/issues "Issues").
 
 ## Requirements
 * Java 11 (Minimum)
+* 7-zip (See Usage note)
 
 ## Usage:
 Code:
 ```
-java -jar parser.jar -i <header> -f <filename>
+java -jar Parser.jar -i <header> -f <filename>
 ```
 
 Arguments:
@@ -42,6 +44,8 @@ Optional arguments:
   -s, --silent			Suppresses text output
   -h, --help			Prints this menu
 ```
+
+Note: if you use a kernel binary you should do: right click on the file -> 7-zip -> Extract here. This should generate a new file called `kernel~`. This is the file you should use as input
 
 ## License
 This tool is licensed under the GNU General Public License (V3). See [LICENSE](https://github.com/Ruben1863/mtk_lcm_tables_parser/blob/main/LICENSE) for more details.

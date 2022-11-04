@@ -1,3 +1,5 @@
+package parser;
+
 import java.io.*;
 import java.util.ArrayList;
 
@@ -235,8 +237,7 @@ public class Parser {
                 out = new File("output/out" + k + ".c");
                 debug("[DEBUG] parse: create new file " + out.getName() + " -> " + out.createNewFile());
 
-                OutputStream outputStream = new PrintStream(out);
-                PrintStream tableOut = new PrintStream(outputStream);
+                PrintStream tableOut = new PrintStream(new FileOutputStream(out));
 
                 // Because there are fake header indexes, we need all bytes and then check them for finding "end of table"
                 // Then Split the string into array of 2 chars
@@ -283,17 +284,19 @@ public class Parser {
                     delay = lastDataBeforeEnd.cmd;
                 }
 
-                for(int j = 0; j < table.size(); j++) {
-                    if(table.get(j).cmd.equals(delay)) {
-                        LCM_setting_table newLine = table.get(j);
-                        newLine.cmd = "REGFLAG_DELAY";
-                        newLine.params_list = new String[]{""};
-                        table.set(j, newLine);
+                if(!delay.equals("")) {
+                    for(int j = 0; j < table.size(); j++) {
+                        if(table.get(j).cmd.equals(delay)) {
+                            LCM_setting_table newLine = table.get(j);
+                            newLine.cmd = "REGFLAG_DELAY";
+                            newLine.params_list = new String[]{""};
+                            table.set(j, newLine);
+                        }
                     }
+                    // Write delay to output files
+                    tableOut.println("//REGFLAG_DELAY = 0x" + delay);
                 }
-
                 // Write table to output files
-                tableOut.println("//REGFLAG_DELAY = 0x" + delay);
                 tableOut.println("//REGFLAG_END_OF_TABLE = 0x" + endOfTableCmd + "\n");
                 tableOut.print(arrayToString(table));
             } catch (NullPointerException | IOException e) {
