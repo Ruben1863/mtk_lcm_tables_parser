@@ -1,4 +1,4 @@
-package parser;
+import org.apache.commons.cli.*;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -15,8 +15,8 @@ public class Parser {
 
     // Table related
     static int offset = 0;
-    static String header = null;
-    static String filename = null;
+    static String header = "";
+    static String filename = "";
 
     // String builders
     static StringBuilder result = new StringBuilder();
@@ -25,7 +25,7 @@ public class Parser {
     static ArrayList<LCM_setting_table> table = new ArrayList<>();
     static ArrayList<Integer> headerIndexesMatches = new ArrayList<>();
 
-    // Struct like. This simulates LCM_setting_table struct of lcms
+    // Struct like. This simulates LCM_setting_table struct of lcm
     static class LCM_setting_table {
         String cmd;
         String count;
@@ -53,66 +53,10 @@ public class Parser {
         @Override
         public String toString() {
             if(cmd.equals("REGFLAG_END_OF_TABLE") || cmd.equals("REGFLAG_DELAY")) {
-                return "{" + cmd + ", " + Integer.parseInt(count,16) + ", {" + format_params() + "}}";
+                return "{" + cmd + ", " + Integer.parseInt(count, 16) + ", {" + format_params() + "}}";
             } else {
-                return "{0x" + cmd + ", " + Integer.parseInt(count,16) + ", {" + format_params() + "}}";
+                return "{0x" + cmd + ", " + Integer.parseInt(count, 16) + ", {" + format_params() + "}}";
             }
-        }
-    }
-
-    public static void argParser(String[] args) {
-        System.out.println("[INFO] LCM TABLES Parser tool (v0.2) by Ruben1863");
-        if(args == null || args.length == 0) {
-            System.out.println("[ERROR] No arguments provided!\n" + "Exiting");
-            System.exit(1);
-        }
-
-        for(int i = 0; i < args.length; i++) {
-            switch (args[i]) {
-                case "-h":
-                case "--help":
-                    System.out.println("# ------------------------------------------------- #");
-                    System.out.println("#                                                   #");
-                    System.out.println("#  Help menu                                        #");
-                    System.out.println("#                                                   #");
-                    System.out.println("#  List of available arguments:                     #");
-                    System.out.println("#                                                   #");
-                    System.out.println("#      Required arguments:                          #");
-                    System.out.println("#      -i, --input: Specify input header            #");
-                    System.out.println("#      -f, --file: Specify input file               #");
-                    System.out.println("#                                                   #");
-                    System.out.println("#      Optional arguments:                          #");
-                    System.out.println("#      -s, --silent: Suppresses text output         #");
-                    System.out.println("#      -h, --help: Prints this menu                 #");
-                    System.out.println("#                                                   #");
-                    System.out.println("#  Example of correct execution:                    #");
-                    System.out.println("#  java -jar parser.jar -i FF0000000101 -f kernel   #");
-                    System.out.println("#                                                   #");
-                    System.out.println("# ------------------------------------------------- #");
-                    System.exit(0);
-                case "-s":
-                case "--silent":
-                    silent = true;
-                case "-i":
-                case "--input":
-                    if(i+1 < args.length)
-                        header = args[i+1];
-                    else
-                        break;
-                case "-f":
-                case "--file":
-                    if(i+1 < args.length)
-                        filename = args[i+1];
-                    else
-                        break;
-                default:
-                    break;
-            }
-        }
-
-        if(header == null || filename == null) {
-            System.out.println("[ERROR] Required arguments aren't provided! Use -h or --help and try again\n" + "Exiting");
-            System.exit(1);
         }
     }
 
@@ -127,7 +71,7 @@ public class Parser {
 
     public static String arrayToString(ArrayList<LCM_setting_table> a) {
         if (a == null)
-            return "null";
+            return null;
 
         int iMax = a.size() - 1;
         if (iMax == -1)
@@ -181,14 +125,11 @@ public class Parser {
             System.exit(1);
         }
 
+        // Convert file to hex
         result = new StringBuilder();
         String hex;
-
-        // Convert file to hex and write to hex file
         int value;
-        try {
-            FileInputStream fis = new FileInputStream(binaryFile);
-            BufferedInputStream bis = new BufferedInputStream(fis);
+        try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(binaryFile))) {
             while ((value = bis.read()) != -1) {
                 hex = Integer.toHexString(value);
                 if (hex.length() == 1) {
@@ -197,17 +138,20 @@ public class Parser {
                 result.append(hex);
                 result.append(" ");
             }
-            bis.close();
-            FileWriter fileWriter = new FileWriter(hexFile, true);
-            BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
-            bufferedWriter.append(result.toString().toUpperCase());
-            result = new StringBuilder(result.toString().replaceAll(" ", "").toUpperCase());
-            bufferedWriter.close();
-            fileWriter.close();
+            result = new StringBuilder(result.toString().toUpperCase());
         } catch (IOException e) {
             System.out.println("[ERROR] toHexFile: There was an error converting " + binaryFile.getName() + " to hex!\n" + "Exiting");
             System.exit(1);
         }
+
+        // Write to hex file
+        try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(hexFile, true))) {
+            bufferedWriter.append(result);
+        } catch (IOException e) {
+            System.out.println("[ERROR] toHexFile: There was an error writing hex bytes!\n" + "Exiting");
+            System.exit(1);
+        }
+        result = new StringBuilder(result.toString().replaceAll(" ", ""));
     }
 
     public static void parse() {
@@ -219,14 +163,14 @@ public class Parser {
         debug("[INFO] Table/s offset is: " + offset/2); // Because we count 0s instead of 00s
         debug("[INFO] Searching for headers");
         for (int index = result.indexOf(header); index >= 0;
-             index = result.indexOf(header, index + 1)) { // Search for header indexes
+             index = result.indexOf(header, index + 1)) { // Search for header occurrences
             headerIndexesMatches.add(index);
         }
 
         if(headerIndexesMatches.size() != 0){
             debug("[INFO] Total headers found: " + headerIndexesMatches.size());
         } else {
-            System.out.println("No headers found\n" + "Exiting");
+            System.out.println("[ERROR] No headers found\n" + "Exiting");
             System.exit(1);
         }
 
@@ -235,12 +179,12 @@ public class Parser {
             table = new ArrayList<>();
             try {
                 out = new File("output/out" + k + ".c");
-                debug("[DEBUG] parse: create new file " + out.getName() + " -> " + out.createNewFile());
+                debug("[DEBUG] Parse: create new file " + out.getName() + " -> " + out.createNewFile());
 
                 PrintStream tableOut = new PrintStream(new FileOutputStream(out));
 
                 // Because there are fake header indexes, we need all bytes and then check them for finding "end of table"
-                // Then Split the string into array of 2 chars
+                // Then we split the string into array of 2 chars
                 String[] arr = result.substring(headerIndexesMatches.get(k)).split("(?<=\\G.{" + 2 + "})");
                 String endOfTableCmd = "";
                 boolean isEndOfTable = false;
@@ -253,7 +197,7 @@ public class Parser {
                         }
                         table.add(new LCM_setting_table(cmd, count, params));
                         table.add(new LCM_setting_table("REGFLAG_END_OF_TABLE", "00", new String[]{}));
-                        endOfTableCmd = arr[i+72]; // Jump 72 bytes
+                        endOfTableCmd = arr[i+72]; // End of table = jump 72 bytes
                         break;
                     } else {
                         if (count.equals("00")) {
@@ -277,7 +221,7 @@ public class Parser {
                     }
                 }
 
-                // check for DELAYS? May be buggy
+                // check for DELAYS. May be buggy
                 LCM_setting_table lastDataBeforeEnd = table.get(table.size()-2);
                 String delay = "";
                 if(!lastDataBeforeEnd.cmd.equals("0x29")) {
@@ -300,15 +244,64 @@ public class Parser {
                 tableOut.println("//REGFLAG_END_OF_TABLE = 0x" + endOfTableCmd + "\n");
                 tableOut.print(arrayToString(table));
             } catch (NullPointerException | IOException e) {
-                System.out.println("[ERROR] parse: Error while creating "  + out.getName() + " file!\n" + "Exiting");
+                System.out.println("[ERROR] Parse: Error while creating "  + out.getName() + " file!\n" + "Exiting");
                 System.exit(1);
             }
         }
-        debug("[INFO] parse: Successfully parsed all available headers! Check output directory\n" + "Exiting :)");
+        debug("[INFO] Parse: Successfully parsed all available headers! Check output directory\n" + "Exiting :)");
     }
 
     public static void main(String[] args) {
-        argParser(args);
+        Options options = new Options();
+
+        Option header = new Option("i", "header", true, "input header");
+        header.setRequired(false);
+        options.addOption(header);
+
+        Option filename = new Option("f", "filename", true, "input file name");
+        filename.setRequired(false);
+        options.addOption(filename);
+
+        Option silent = new Option("s", "silent", false, "suppresses text output");
+        silent.setRequired(false);
+        options.addOption(silent);
+
+        Option help = new Option("h", "help", false, "prints this menu");
+        help.setRequired(false);
+        options.addOption(help);
+
+        CommandLineParser parser = new DefaultParser();
+        HelpFormatter formatter = new HelpFormatter();
+
+        try {
+            CommandLine cmd = parser.parse(options, args);
+
+            if(cmd.hasOption("help")){
+                System.out.println("[INFO] LCM TABLES Parser tool (v0.2) by Ruben1863");
+                formatter.printHelp("java -jar Parser.jar", options);
+                System.exit(0);
+            } else if(cmd.hasOption("silent")) {
+                Parser.silent = true;
+            }
+
+            if(cmd.hasOption("header") && cmd.hasOption("filename")) {
+                Parser.header = cmd.getOptionValue("header");
+                Parser.filename = cmd.getOptionValue("filename");
+            } else {
+                if(!cmd.hasOption("header") && cmd.hasOption("filename")) {
+                    throw new ParseException("[ERROR] Missing required options: -i");
+                } else if(!cmd.hasOption("filename") && cmd.hasOption("header")) {
+                    throw new ParseException("[ERROR] Missing required options: -f");
+                } else {
+                    throw new ParseException("[ERROR] Missing required options: -i, -f");
+                }
+            }
+        } catch (ParseException e) {
+            System.out.println(e.getMessage());
+            formatter.printHelp("java -jar Parser.jar", options);
+            System.exit(1);
+        }
+
         convertFileToHex();
         parse();
     }

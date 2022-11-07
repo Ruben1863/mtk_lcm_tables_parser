@@ -21,12 +21,12 @@ The output will be like:
 - This utility it is still in alpha version, so it is very possible that you will find errors or certain tables that it cannot process.
 - For now is just able to extract `lcm_init` tables. 
 - V3 init tables aren't supported.
-- Init tables with delays like: `0xFFFE`, aren't supported.
+- Init tables with delays like: `0xFFFE`, are bugged. The table will be parsed successfully but the delay value will be `0xFE` (is it is `0xFFFE`).
 - In case something is broken or you have any doubt, feel free to open an [ISSUE](https://github.com/Ruben1863/mtk_lcm_tables_parser/issues "Issues").
 
 ## Requirements
 * Java 11 (Minimum)
-* 7-zip (See Usage note)
+* 7-zip (See `Usage` note)
 
 ## Usage:
 Code:
@@ -42,10 +42,12 @@ Required arguments:
   
 Optional arguments:
   -s, --silent			Suppresses text output
-  -h, --help			Prints this menu
+  -h, --help			Prints a menu like this
 ```
 
-Note: if you use a kernel binary you should do: right click on the file -> 7-zip -> Extract here. This should generate a new file called `kernel~`. This is the file you should use as input
+Note: if you use a kernel binary you should do: right click on the file -> 7-zip -> Extract here. This should generate a new file called `kernel~`. This is the file you should use as input.
+
+In case you want to use this tool in a Java IDE (like Intellij, Eclipse...), you have the source code at `source` folder.
 
 ## License
 This tool is licensed under the GNU General Public License (V3). See [LICENSE](https://github.com/Ruben1863/mtk_lcm_tables_parser/blob/main/LICENSE) for more details.
