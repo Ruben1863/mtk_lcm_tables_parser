@@ -41,7 +41,6 @@ Required arguments:
   -f, --file			Input file name (it should be placed at 'input' directory)
   
 Optional arguments:
-  -s, --silent			Suppresses text output
   -h, --help			Prints a menu like this
 ```
 
