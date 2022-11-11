@@ -145,13 +145,36 @@ public class Parser {
                 for(int i = 0; i < arr.length; i++) {
                     String cmd = arr[i], count = arr[i+(offset/2)+1];
                     if(isEndOfTable) {
-                        String[] params = new String[Integer.parseInt(count,16)];
-                        for(int j = 0; j < Integer.parseInt(count,16); j++) {
-                            params[j] = arr[i + (offset/2) + 2 + j];
+                        if(!count.equals("00")) {
+                            String[] params = new String[Integer.parseInt(count,16)];
+                            for(int j = 0; j < Integer.parseInt(count,16); j++) {
+                                params[j] = arr[i + (offset/2) + 2 + j];
+                            }
+                            // End of table
+                            if(arr[i+73].equals("00")) {
+                                endOfTableCmd = arr[i+72];
+                            } else {
+                                if(arr[i+73].contains("0")) {
+                                    endOfTableCmd = arr[i+72] + arr[i+73].replace("0","");
+                                } else {
+                                    endOfTableCmd = arr[i+72] + arr[i+73];
+                                }
+                                table.add(new LCM_setting_table(cmd, count, params));
+                                table.add(new LCM_setting_table("REGFLAG_END_OF_TABLE", "00", new String[]{}));
+                            }
+                        } else {
+                            // End of table
+                            if(arr[i+1].equals("00")) {
+                                endOfTableCmd = arr[i];
+                            } else {
+                                if(arr[i+1].contains("0")) {
+                                    endOfTableCmd = arr[i] + arr[i+1].replace("0","");
+                                } else {
+                                    endOfTableCmd = arr[i] + arr[i+1];
+                                }
+                                table.add(new LCM_setting_table("REGFLAG_END_OF_TABLE", "00", new String[]{}));
+                            }
                         }
-                        table.add(new LCM_setting_table(cmd, count, params));
-                        table.add(new LCM_setting_table("REGFLAG_END_OF_TABLE", "00", new String[]{}));
-                        endOfTableCmd = arr[i+72]; // End of table = jump 72 bytes
                         break;
                     } else {
                         if (count.equals("00")) {
@@ -176,10 +199,15 @@ public class Parser {
                 }
 
                 // Check for DELAYS. May be buggy
-                LCM_setting_table lastDataBeforeEnd = table.get(table.size()-2);
+                LCM_setting_table data1 = table.get(table.size()-2);
+                LCM_setting_table data2 = table.get(table.size()-3);
+                LCM_setting_table data3 = table.get(table.size()-4);
+
                 String delay = "";
-                if(!lastDataBeforeEnd.cmd.equals("0x29")) {
-                    delay = lastDataBeforeEnd.cmd;
+                if(data1.cmd.equals(data3.cmd)) {
+                    delay = data1.cmd;
+                } else if(data1.cmd.equals("29")) {
+                    delay = data2.cmd;
                 }
 
                 if(!delay.equals("")) {

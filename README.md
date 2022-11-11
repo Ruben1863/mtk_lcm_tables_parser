@@ -21,7 +21,8 @@ The output will be like:
 - This utility it is still in alpha version, so it is very possible that you will find errors or certain tables that it cannot process.
 - For now is just able to extract `lcm_init` tables. 
 - V3 init tables aren't supported.
-- Init tables with delays like: `0xFFFE`, are bugged. The table will be parsed successfully but the delay value will be `0xFE` (is it is `0xFFFE`).
+- Init tables with delays like: `0xFFFE`, are bugged. The table will be parsed successfully but the delay value will be `0xFE` (if it is `0xFFFE`).
+- End of table values like `0xFFF`, now should be parsed correctly.
 - In case something is broken or you have any doubt, feel free to open an [ISSUE](https://github.com/Ruben1863/mtk_lcm_tables_parser/issues "Issues").
 
 ## Requirements
